@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cek Suara RAW - Aula Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --panel-bg: #1a1a1a;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent: #3b82f6;
+            --pas: #10b981;    /* Hijau */
+            --meleset: #eab308; /* Kuning */
+            --fals: #ef4444;    /* Merah */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+
+        header p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        #startBtn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transition: background 0.2s;
+            margin-bottom: 20px;
+        }
+
+        #startBtn.active {
+            background-color: #ef4444;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .pitch-display {
+            background-color: var(--panel-bg);
+            border-radius: 16px;
+            padding: 25px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        #note {
+            font-size: 4.5rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 5px;
+            transition: color 0.1s;
+        }
+
+        #cents {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .tuner-bar {
+            width: 100%;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tuner-center {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255,255,255,0.5);
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        #tuner-indicator {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 12px;
+            background-color: var(--pas);
+            border-radius: 6px;
+            transform: translateX(-50%);
+            left: 50%;
+            transition: left 0.1s ease, background-color 0.1s;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background-color: var(--panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .log-container {
+            flex-grow: 1;
+            background-color: var(--panel-bg);
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .log-item {
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        .log-time { color: var(--text-muted); }
+        
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .badge.pas { background-color: var(--pas); }
+        .badge.meleset { background-color: var(--meleset); }
+        .badge.fals { background-color: var(--fals); color: #fff;}
+
+        .footer-note {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: auto;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CEK SUARA RAW</h1>
+        <p>Aula Edition (No Autotune)</p>
+    </header>
+
+    <button id="startBtn">Mulai Cek Suara</button>
+
+    <div class="pitch-display">
+        <div id="note">--</div>
+        <div id="cents" style="color: var(--text-muted);">0¢</div>
+        <div class="tuner-bar">
+            <div class="tuner-center"></div>
+            <div id="tuner-indicator"></div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <span class="stat-label">Accuracy / Score</span>
+            <span class="stat-value" id="val-accuracy">0% (0.0)</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Breath / Tone</span>
+            <span class="stat-value" id="val-tone">---</span>
+        </div>
+        <div class="stat-box" style="grid-column: span 2;">
+            <span class="stat-label">Duration</span>
+            <span class="stat-value" id="val-duration">00:00.0</span>
+        </div>
+    </div>
+
+    <div class="log-container" id="log-box">
+        <!-- Log live akan muncul di sini -->
+    </div>
+
+    <div class="footer-note">
+        Taruh HP 1m di kursi aula, rekam 45 detik Glimpse of Us -3 key
+    </div>
+
+    <script>
+        // Audio Variables
+        let audioContext = null;
+        let analyser = null;
+        let mediaStreamSource = null;
+        let isRecording = false;
+        let animationId = null;
+        
+        // Data & Buffers
+        const buflen = 2048;
+        let buf = new Float32Array(buflen);
+        const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        
+        // Stats Tracking
+        let startTime = 0;
+        let totalNotesDetected = 0;
+        let perfectNotes = 0;
+        let lastLogTime = 0;
+        let currentPitchData = null; // {note, cents, status}
+
+        // DOM Elements
+        const startBtn = document.getElementById('startBtn');
+        const noteEl = document.getElementById('note');
+        const centsEl = document.getElementById('cents');
+        const tunerIndicator = document.getElementById('tuner-indicator');
+        const valAccuracy = document.getElementById('val-accuracy');
+        const valTone = document.getElementById('val-tone');
+        const valDuration = document.getElementById('val-duration');
+        const logBox = document.getElementById('log-box');
+
+        // Pitch Math Functions
+        function noteFromPitch(frequency) {
+            let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+            return Math.round(noteNum) + 69;
+        }
+
+        function frequencyFromNoteNumber(note) {
+            return 440 * Math.pow(2, (note - 69) / 12);
+        }
+
+        function centsOffFromPitch(frequency, note) {
+            return Math.floor(1200 * Math.log(frequency / frequencyFromNoteNumber(note)) / Math.log(2));
+        }
+
+        // Auto-Correlation Algorithm
+        function autoCorrelate(buf, sampleRate) {
+            let SIZE = buf.length;
+            let rms = 0;
+
+            for (let i = 0; i < SIZE; i++) {
+                let val = buf[i];
+                rms += val * val;
+            }
+            rms = Math.sqrt(rms / SIZE);
+            if (rms < 0.005) return { pitch: -1, rms: rms }; // Terlalu pelan
+
+            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+            for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+            for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+
+            buf = buf.slice(r1, r2);
+            SIZE = buf.length;
+
+            let c = new Array(SIZE).fill(0);
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE - i; j++) {
+                    c[i] = c[i] + buf[j] * buf[j + i];
+                }
+            }
+
+            let d = 0; while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < SIZE; i++) {
+                if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+            }
+            let T0 = maxpos;
+
+            let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
+            let a = (x1 + x3 - 2 * x2) / 2;
+            let b = (x3 - x1) / 2;
+            if (a) T0 = T0 - b / (2 * a);
+
+            let pitch = sampleRate / T0;
+            return { pitch: pitch, rms: rms };
+        }
+
+        function getStatus(cents) {
+            let absCents = Math.abs(cents);
+            if (absCents <= 15) return "PAS";
+            if (absCents <= 35) return "MELESET";
+            return "FALS";
+        }
+
+        function getColor(status) {
+            if (status === "PAS") return "var(--pas)";
+            if (status === "MELESET") return "var(--meleset)";
+            return "var(--fals)";
+        }
+
+        function addLog(timeSec, note, cents, status) {
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            
+            const sign = cents > 0 ? '+' : '';
+            const statusClass = status.toLowerCase();
+            
+            logItem.innerHTML = `
+                <span class="log-time">${timeSec.toFixed(1)}s</span>
+                <span class="log-detail">${note} ${sign}${cents}¢</span>
+                <span class="badge ${statusClass}">${status}</span>
+            `;
+            
+            logBox.appendChild(logItem);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function updatePitch() {
+            if (!isRecording) return;
+            
+            let now = audioContext.currentTime;
+            let elapsed = now - startTime;
+            
+            // Update Timer
+            valDuration.innerText = Math.floor(elapsed / 60).toString().padStart(2, '0') + ':' + 
+                                    (Math.floor(elapsed) % 60).toString().padStart(2, '0') + '.' + 
+                                    Math.floor((elapsed % 1) * 10);
+
+            analyser.getFloatTimeDomainData(buf);
+            let result = autoCorrelate(buf, audioContext.sampleRate);
+            
+            if (result.pitch !== -1 && result.pitch > 50 && result.pitch < 2000) {
+                let pitch = result.pitch;
+                let note = noteFromPitch(pitch);
+                let cents = centsOffFromPitch(pitch, note);
+                let noteName = noteStrings[note % 12] + Math.floor(note / 12 - 1);
+                
+                let status = getStatus(cents);
+                let color = getColor(status);
+
+                // UI Pitch Update
+                noteEl.innerText = noteName;
+                noteEl.style.color = color;
+                centsEl.innerText = `${cents > 0 ? '+' : ''}${cents}¢`;
+                centsEl.style.color = color;
+                
+                // Visual Bar Update (-50 to +50 cents -> 0% to 100%)
+                let percentage = Math.max(0, Math.min(100, (cents + 50)));
+                tunerIndicator.style.left = `${percentage}%`;
+                tunerIndicator.style.backgroundColor = color;
+
+                // Accuracy Tracking
+                totalNotesDetected++;
+                if (status === "PAS") perfectNotes++;
+                let accuracy = (perfectNotes / totalNotesDetected) * 100;
+                let score = (accuracy / 10).toFixed(1);
+                valAccuracy.innerText = `${accuracy.toFixed(1)}% (${score})`;
+
+                // Breath & Tone Analysis
+                if (result.rms < 0.04) {
+                    valTone.innerText = "BOCOR | Breathy Tipis";
+                    valTone.style.color = "var(--meleset)";
+                } else {
+                    valTone.innerText = "KUAT | Solid";
+                    valTone.style.color = "var(--pas)";
+                }
+
+                currentPitchData = { note: noteName, cents: cents, status: status };
+                
+            } else {
+                // Silen (Tidak nyanyi)
+                noteEl.innerText = "--";
+                noteEl.style.color = "var(--text-main)";
+                centsEl.innerText = "0¢";
+                centsEl.style.color = "var(--text-muted)";
+                tunerIndicator.style.left = "50%";
+                tunerIndicator.style.backgroundColor = "var(--pas)";
+                valTone.innerText = "---";
+                valTone.style.color = "var(--text-main)";
+                currentPitchData = null;
+            }
+
+            // Live Log Every 1 Second
+            if (elapsed - lastLogTime >= 1.0) {
+                lastLogTime = elapsed;
+                if (currentPitchData) {
+                    addLog(elapsed, currentPitchData.note, currentPitchData.cents, currentPitchData.status);
+                }
+            }
+
+            animationId = requestAnimationFrame(updatePitch);
+        }
+
+        async function toggleRecording() {
+            if (isRecording) {
+                // Stop
+                isRecording = false;
+                startBtn.innerText = "Mulai Cek Suara";
+                startBtn.classList.remove('active');
+                cancelAnimationFrame(animationId);
+                if (mediaStreamSource) mediaStreamSource.mediaStream.getTracks().forEach(track => track.stop());
+                if (audioContext) await audioContext.close();
+            } else {
+                // Reset stats
+                logBox.innerHTML = '';
+                totalNotesDetected = 0;
+                perfectNotes = 0;
+                lastLogTime = 0;
+                valAccuracy.innerText = "0% (0.0)";
+                
+                try {
+                    // REQUIREMENT RAW: echoCancellation, autoGainControl, noiseSuppression = false
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            autoGainControl: false,
+                            noiseSuppression: false
+                        }
+                    });
+
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = buflen;
+                    
+                    mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                    mediaStreamSource.connect(analyser);
+
+                    startTime = audioContext.currentTime;
+                    isRecording = true;
+                    startBtn.innerText = "Hentikan Cek Suara";
+                    startBtn.classList.add('active');
+
+                    updatePitch();
+                } catch (err) {
+                    alert("Akses Mikrofon ditolak atau tidak tersedia. Pastikan memberikan izin!");
+                    console.error(err);
+                }
+            }
+        }
+
+        startBtn.addEventListener('click', toggleRecording);
+    </script>
+</body>
+</html>
